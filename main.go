@@ -3,20 +3,32 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"log"
+	"os"
 
 	"github.com/Microsoft/go-winio"
 )
 
 func main() {
-	conn, err := winio.DialPipe(`\\.\pipe\wslctl`, nil)
+	// Define the named pipe you're connecting to
+	pipeName := `\\.\pipe\wslctl`
+
+	// Dial the named pipe using winio
+	conn, err := winio.DialPipe(pipeName, nil)
 	if err != nil {
-		log.Fatalf("Cannot connect: %v", err)
+		fmt.Printf("Failed to connect: %v\n", err)
+		os.Exit(1)
 	}
 	defer conn.Close()
 
-	fmt.Fprintf(conn, "hello\n")
+	// Send a command
+	_, err = fmt.Fprintf(conn, "%s\n", os.Args[1])
+	if err != nil {
+		fmt.Printf("Failed to send message: %v\n", err)
+		os.Exit(1)
+	}
 
-	resp, _ := bufio.NewReader(conn).ReadString('\n')
-	fmt.Print(resp) // prints "hello from wslctl-server"
+	// Read the response from the pipe
+	reader := bufio.NewReader(conn)
+	response, _ := reader.ReadString('\n')
+	fmt.Println("Response:", response)
 }
